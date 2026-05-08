@@ -87,5 +87,5 @@ En Vercel
 
 ## Estado del proyecto
 
-🚧 Se va a seguir mejorando activamnte.
+🚧 Se va a seguir mejorando activamente.
 
