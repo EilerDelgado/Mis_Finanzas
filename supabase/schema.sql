@@ -1,12 +1,3 @@
--- ============================================================
--- FinanceTrack — Schema limpio
--- Ejecutar completo en Supabase SQL Editor
--- ============================================================
-
--- ============================================================
--- TABLAS
--- ============================================================
-
 create table if not exists public.profiles (
   id         uuid primary key references auth.users(id) on delete cascade,
   role       text not null default 'user' check (role in ('superadmin', 'user')),
@@ -33,9 +24,6 @@ create table if not exists public.transactions (
   created_at  timestamptz not null default now()
 );
 
--- ============================================================
--- TRIGGER: crea perfil automáticamente al registrar usuario
--- ============================================================
 
 create or replace function public.handle_new_user()
 returns trigger
@@ -53,9 +41,6 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
--- ============================================================
--- FUNCIÓN HELPER: evita recursión en policies de superadmin
--- ============================================================
 
 create or replace function public.is_superadmin()
 returns boolean
@@ -69,9 +54,6 @@ as $$
   );
 $$;
 
--- ============================================================
--- RLS
--- ============================================================
 
 alter table public.profiles     enable row level security;
 alter table public.categories   enable row level security;
@@ -82,11 +64,6 @@ alter table public.transactions enable row level security;
 create policy "profiles_select_own"
   on public.profiles for select
   using (auth.uid() = id);
-
--- Superadmin lee todos los perfiles
-create policy "profiles_select_superadmin"
-  on public.profiles for select
-  using (public.is_superadmin());
 
 -- Solo superadmin puede actualizar perfiles
 create policy "profiles_update_superadmin"
@@ -107,7 +84,12 @@ create policy "transactions_all_own"
   using (auth.uid() = created_by)
   with check (auth.uid() = created_by);
 
--- Superadmin puede leer todas las transacciones (métricas globales)
-create policy "transactions_select_superadmin"
-  on public.transactions for select
-  using (public.is_superadmin());
+
+alter table public.profiles
+  add column if not exists display_name text;
+
+-- Policy para que el usuario actualice solo su propio perfil
+create policy "profiles_update_own"
+  on public.profiles for update
+  using (auth.uid() = id)
+  with check (auth.uid() = id);
